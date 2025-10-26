@@ -5,10 +5,12 @@
 ## ویژگی‌ها ✨
 
 - **معماری تمیز و مدولار**: طراحی بر اساس اصول SOLID
-- **Agent-Based System**: قابلیت افزودن agent های مختلف (Technical, ML, Sentiment)
+- **Multi-Agent System**: ترکیب Signal Agent, ML Agent, و Regime Detection 🎯
+- **Machine Learning**: پیش‌بینی با RandomForest و XGBoost (96%+ accuracy) 🤖
 - **تحلیل تکنیکال پیشرفته**: شامل RSI, MACD, Bollinger Bands, Moving Averages
 - **Backtesting Module**: آزمایش و ارزیابی استراتژی‌ها روی داده‌های تاریخی
 - **8 استراتژی آماده**: 3 ساده + 5 پیشرفته با win rate بالاتر
+- **Integrated Trading System**: سیستم یکپارچه با وزن‌دهی خودکار بر اساس market regime
 - **Docker Support**: آماده برای containerization و deployment
 - **تصمیم‌گیری هوشمند**: Aggregation چند agent با وزن‌دهی confidence
 - **قابل توسعه**: آماده برای افزودن ML models و سایر agent ها
@@ -39,6 +41,12 @@ Data/
 │   │   ├── signal_agent.py    # تحلیل تکنیکال طلا
 │   │   └── indicators.py      # اندیکاتورهای تکنیکال
 │   │
+│   ├── ml/                     # ML Agent (Machine Learning) 🤖
+│   │   ├── __init__.py
+│   │   ├── ml_agent.py        # ML prediction agent
+│   │   ├── feature_engineer.py # 70+ features extraction
+│   │   └── models.py          # RandomForest, XGBoost, Ensemble
+│   │
 │   └── decision/               # Decision Agent
 │       ├── __init__.py
 │       └── decision_agent.py  # تصمیم‌گیری نهایی
@@ -49,23 +57,35 @@ Data/
 │   ├── strategy.py             # BaseStrategy interface
 │   ├── strategies.py           # 3 استراتژی ساده
 │   ├── advanced_strategies.py  # 5 استراتژی پیشرفته ⭐
+│   ├── adaptive_engine.py      # Adaptive strategy selection 🧠
+│   ├── regime_detector.py      # Market regime detection
 │   ├── metrics.py              # محاسبه performance metrics
 │   └── engine.py               # Backtesting engine
 │
 ├── examples/                    # مثال‌های استفاده
+│   ├── simple_integrated.py    # مثال ساده سیستم یکپارچه ⭐
+│   ├── test_complete_system.py # تست کامل سیستم یکپارچه ⭐
+│   ├── test_ml_agent.py        # تست و train ML Agent 🤖
+│   ├── test_ml_quick.py        # تست سریع ML
 │   ├── advanced_usage.py       # مثال‌های پیشرفته
 │   ├── backtest_examples.py    # مثال‌های backtesting
-│   └── test_advanced_strategies.py  # تست استراتژی‌های پیشرفته ⭐
+│   └── test_advanced_strategies.py  # تست استراتژی‌های پیشرفته
 │
-├── main.py                      # نقطه ورود اصلی
-├── requirements.txt             # وابستگی‌ها
-├── Dockerfile                   # Docker image
-├── docker-compose.yml           # Docker services
+├── models/                      # ML models directory
+│   └── gold_ml_model.pkl       # Trained ML model
+│
+├── trading_system.py           # Integrated Trading System ⭐
+├── main.py                     # نقطه ورود اصلی
+├── requirements.txt            # وابستگی‌ها
+├── Dockerfile                  # Docker image
+├── docker-compose.yml          # Docker services
 ├── .dockerignore
-├── .env                        # API Key (در .gitignore)
+├── .env                       # API Key (در .gitignore)
 ├── .gitignore
 ├── README.md
-└── DEVELOPER_GUIDE.md          # راهنمای توسعه‌دهنده
+├── ML_AGENT.md                # راهنمای ML Agent 🤖
+├── INTEGRATED_SYSTEM.md       # راهنمای سیستم یکپارچه ⭐
+└── DEVELOPER_GUIDE.md         # راهنمای توسعه‌دهنده
 ```
 
 ## نصب و راه‌اندازی 🚀
@@ -84,8 +104,20 @@ pip install -r requirements.txt
 
 #### 3. اجرا
 
+**Simple Example:**
 ```bash
-python main.py
+python examples/simple_integrated.py
+```
+
+**Complete System Test:**
+```bash
+python examples/test_complete_system.py
+```
+
+**Train ML Model:**
+```bash
+python examples/test_ml_agent.py
+# Select option 1 to train
 ```
 
 ### روش 2: استفاده از Docker 🐳
@@ -124,6 +156,38 @@ docker-compose down
 
 ## استفاده ساده 💡
 
+### Integrated Trading System (توصیه شده) ⭐
+
+```python
+from trading_system import IntegratedTradingSystem
+from data_layer import TwelveDataClient
+
+# Fetch data
+client = TwelveDataClient()
+market_data = client.get_time_series("XAU/USD", interval="1h", outputsize=500)
+
+# Initialize system
+system = IntegratedTradingSystem()
+system.initialize()
+
+# Get recommendation
+recommendation = system.analyze(market_data)
+
+print(f"Action: {recommendation.action}")
+print(f"Confidence: {recommendation.confidence:.1%}")
+print(f"Market Regime: {recommendation.market_regime}")
+```
+
+**Features:**
+- 🎯 ترکیب Signal Agent (Technical) + ML Agent (Predictions)
+- 🧠 تشخیص خودکار Market Regime (Trending/Ranging/Volatile)
+- ⚖️ وزن‌دهی خودکار agents بر اساس regime
+- 📊 توضیح کامل تصمیمات
+
+برای جزئیات بیشتر: [INTEGRATED_SYSTEM.md](INTEGRATED_SYSTEM.md)
+
+### استفاده دستی از Agents
+
 ```python
 from config import settings
 from data_layer import TwelveDataClient
@@ -150,7 +214,48 @@ print(f"Confidence: {decision.confidence:.2f}")
 
 ## مثال‌های پیشرفته 🎯
 
-### استفاده از سیستم تحلیل
+### 1. استفاده از سیستم یکپارچه
+
+برای استفاده کامل از سیستم یکپارچه:
+
+```bash
+# Simple example
+python examples/simple_integrated.py
+
+# Complete test with all features
+python examples/test_complete_system.py
+```
+
+### 2. ML Agent (Machine Learning) 🤖
+
+```python
+from agents.ml import MLAgent
+from data_layer import TwelveDataClient
+
+# Train model
+client = TwelveDataClient()
+train_data = client.get_time_series("XAU/USD", interval="1h", outputsize=2000)
+
+ml_agent = MLAgent()
+ml_agent.train(train_data, model_type="ensemble")  # RandomForest + XGBoost
+
+# Make predictions
+test_data = client.get_time_series("XAU/USD", interval="1h", outputsize=100)
+prediction = ml_agent.analyze(test_data)
+
+print(f"Recommendation: {prediction.recommendation}")
+print(f"Confidence: {prediction.confidence:.1%}")
+```
+
+**Features:**
+- 70+ extracted features (RSI, MACD, BB, ATR, price patterns, etc.)
+- Ensemble model (RandomForest + XGBoost)
+- 96%+ validation accuracy
+- Feature importance analysis
+
+برای جزئیات بیشتر: [ML_AGENT.md](ML_AGENT.md)
+
+### 3. استفاده از سیستم تحلیل
 
 برای مثال‌های بیشتر به `examples/advanced_usage.py` مراجعه کنید:
 
@@ -163,7 +268,7 @@ print(f"Confidence: {decision.confidence:.2f}")
 python examples/advanced_usage.py
 ```
 
-### Backtesting 📊
+### 4. Backtesting 📊
 
 #### اجرای Backtest
 
