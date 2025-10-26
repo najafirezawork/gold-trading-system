@@ -7,6 +7,7 @@ from datetime import datetime
 from dataclasses import dataclass
 import pandas as pd
 import numpy as np
+import pickle
 from pathlib import Path
 
 from agents.base import BaseAgent, AgentOutput, AgentType
@@ -110,6 +111,37 @@ class MLAgent(BaseAgent):
         self.last_features: Optional[pd.DataFrame] = None
         self.selected_features: Optional[List[str]] = None
     
+    def load_model(self, path: Optional[str] = None):
+        """
+        بارگذاری model و selected features
+        
+        Args:
+            path: مسیر model (اختیاری، default: self.model_path)
+        """
+        import pickle
+        
+        model_path = path or self.model_path
+        
+        print(f"Loading model from {model_path}...")
+        
+        with open(model_path, 'rb') as f:
+            model_data = pickle.load(f)
+        
+        # Load model
+        if isinstance(model_data, dict):
+            # New format (with selected_features)
+            self.model = model_data['model']
+            self.selected_features = model_data.get('selected_features')
+            self.enable_feature_selection = model_data.get('enable_feature_selection', True)
+            
+            print(f"✅ Model loaded")
+            print(f"   Selected features: {len(self.selected_features) if self.selected_features else 'None'}")
+        else:
+            # Old format (just model)
+            self.model = model_data
+            self.selected_features = None
+            print(f"✅ Model loaded (old format - no selected features)")
+    
     def train(
         self,
         market_data: MarketData,
@@ -203,11 +235,24 @@ class MLAgent(BaseAgent):
             'metrics': metrics
         })
         
-        # Save model
+        # Save model + selected features
         if save_model:
             print(f"\nSaving model to {self.model_path}...")
-            self.model.save(self.model_path)
+            
+            # Save model data
+            model_data = {
+                'model': self.model,
+                'selected_features': self.selected_features,  # ✅ ذخیره selected features
+                'enable_feature_selection': self.enable_feature_selection
+            }
+            
+            import pickle
+            Path(self.model_path).parent.mkdir(parents=True, exist_ok=True)
+            with open(self.model_path, 'wb') as f:
+                pickle.dump(model_data, f)
+            
             print(f"Model saved successfully!")
+            print(f"Selected features: {len(self.selected_features) if self.selected_features else 'None'}")
         
         print(f"{'='*60}\n")
         
@@ -319,10 +364,23 @@ class MLAgent(BaseAgent):
             raise FileNotFoundError(f"Model file not found: {model_path}")
         
         print(f"Loading model from {model_path}...")
-        self.model.load(model_path)
         
-        # بعد از load، مطمئن شو که is_trained = True است
-        if not self.model.is_trained:
+        # ✅ بارگذاری با selected_features
+        with open(model_path, 'rb') as f:
+            model_data = pickle.load(f)
+        
+        # Restore model
+        if isinstance(model_data, dict):
+            self.model = model_data['model']
+            self.selected_features = model_data.get('selected_features')
+            print(f"✅ Model loaded with {len(self.selected_features) if self.selected_features else 'all'} features")
+        else:
+            # Old format compatibility
+            self.model = model_data
+            print(f"⚠️  Old model format loaded (no selected_features)")
+        
+        # Ensure trained flag
+        if hasattr(self.model, 'is_trained'):
             self.model.is_trained = True
         
         print(f"Model loaded successfully!")

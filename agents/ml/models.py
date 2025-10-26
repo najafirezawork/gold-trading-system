@@ -89,7 +89,7 @@ class RandomForestModel(MLModel):
         max_depth: Optional[int] = 10,
         min_samples_split: int = 5,
         min_samples_leaf: int = 1,
-        max_features: str = 'auto',
+        max_features: str = 'sqrt',  # ✅ Changed from 'auto' to 'sqrt'
         class_weight: Optional[Dict[int, float]] = None,
         random_state: int = 42
     ):
