@@ -1,0 +1,24 @@
+{
+  "strategy": "Adaptive RSI (ATR-based)",
+  "symbol": "XAU/USD",
+  "period": "2025-10-25 to 2025-09-04",
+  "initial_capital": 10000.0,
+  "final_capital": 9579.090000000007,
+  "total_return": "$-420.91 (-4.21%)",
+  "trades": {
+    "total": 49,
+    "wins": 29,
+    "losses": 20,
+    "win_rate": "59.18%"
+  },
+  "performance": {
+    "avg_profit": "$17.26",
+    "avg_loss": "$46.07",
+    "profit_factor": "0.54",
+    "max_drawdown": "$504.31 (5.04%)"
+  },
+  "ratios": {
+    "sharpe": "-3.54",
+    "sortino": "-4.51"
+  }
+}

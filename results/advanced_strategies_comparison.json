@@ -1,0 +1,92 @@
+{
+  "timestamp": "2025-10-26T17:39:27.037781",
+  "test_type": "Advanced Strategies Comparison",
+  "total_strategies": 5,
+  "strategies": [
+    {
+      "name": "Trend Following (50/200)",
+      "metrics": {
+        "return_pct": 0.0,
+        "total_trades": 0,
+        "win_rate": 0.0,
+        "sharpe_ratio": null,
+        "sortino_ratio": null,
+        "max_drawdown_pct": 0.0,
+        "profit_factor": 0.0
+      },
+      "capital": {
+        "initial": 10000.0,
+        "final": 10000.0,
+        "return": 0.0
+      }
+    },
+    {
+      "name": "Mean Reversion (BB20, RSI14)",
+      "metrics": {
+        "return_pct": -0.8590999999999985,
+        "total_trades": 13,
+        "win_rate": 53.84615384615385,
+        "sharpe_ratio": -1.9171259163327397,
+        "sortino_ratio": -14.17310275873641,
+        "max_drawdown_pct": 5.374800000000032,
+        "profit_factor": 0.82994516914428
+      },
+      "capital": {
+        "initial": 10000.0,
+        "final": 9914.09,
+        "return": -85.90999999999985
+      }
+    },
+    {
+      "name": "Breakout (20 bars)",
+      "metrics": {
+        "return_pct": 0.0,
+        "total_trades": 0,
+        "win_rate": 0.0,
+        "sharpe_ratio": null,
+        "sortino_ratio": null,
+        "max_drawdown_pct": 0.0,
+        "profit_factor": 0.0
+      },
+      "capital": {
+        "initial": 10000.0,
+        "final": 10000.0,
+        "return": 0.0
+      }
+    },
+    {
+      "name": "Multi-Confirmation (SMA50)",
+      "metrics": {
+        "return_pct": 0.525,
+        "total_trades": 1,
+        "win_rate": 100.0,
+        "sharpe_ratio": null,
+        "sortino_ratio": null,
+        "max_drawdown_pct": 0.046399999999994175,
+        "profit_factor": 0.0
+      },
+      "capital": {
+        "initial": 10000.0,
+        "final": 10052.5,
+        "return": 52.5
+      }
+    },
+    {
+      "name": "Adaptive RSI (ATR-based)",
+      "metrics": {
+        "return_pct": 0.6084999999999854,
+        "total_trades": 30,
+        "win_rate": 56.666666666666664,
+        "sharpe_ratio": -0.09128405889947547,
+        "sortino_ratio": -0.20094839982972543,
+        "max_drawdown_pct": 4.578099999999977,
+        "profit_factor": 1.0886573905441816
+      },
+      "capital": {
+        "initial": 10000.0,
+        "final": 10060.849999999999,
+        "return": 60.849999999998545
+      }
+    }
+  ]
+}

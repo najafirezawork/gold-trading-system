@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  trading-system:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gold-trading-system
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount کد برای development
+      - .:/app
+      # Mount logs
+      - ./logs:/app/logs
+      # Mount نتایج تحلیل
+      - ./results:/app/results
+    networks:
+      - trading-network
+    restart: unless-stopped
+    # Override command برای حالت‌های مختلف
+    # command: python main.py
+    # command: python test_system.py
+    # command: python examples/use_cases.py
+
+  # سرویس آینده: PostgreSQL برای ذخیره‌سازی
+  # database:
+  #   image: postgres:16-alpine
+  #   container_name: trading-db
+  #   environment:
+  #     POSTGRES_DB: trading_db
+  #     POSTGRES_USER: trader
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - trading-network
+  #   ports:
+  #     - "5432:5432"
+
+  # سرویس آینده: Redis برای caching
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: trading-cache
+  #   networks:
+  #     - trading-network
+  #   ports:
+  #     - "6379:6379"
+
+networks:
+  trading-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
