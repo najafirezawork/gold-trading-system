@@ -1,4 +1,8 @@
+# Environment
 .env
+.env.local
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -6,5 +10,32 @@ __pycache__/
 .Python
 *.so
 *.log
+*.py[cod]
+*$py.class
+
+# ML Models (don't commit trained models)
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.pt
+
+# Results
+results/*.json
+results/*.csv
+
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride

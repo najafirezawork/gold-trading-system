@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     twelve_data_api_key: str = Field(..., alias="TWELVE_DATA_API_KEY")
     twelve_data_base_url: str = "https://api.twelvedata.com"
     
+    # Environment Configuration
+    environment: str = Field(default="development", alias="ENVIRONMENT")
+    
+    # Logging Configuration
+    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    log_file: str = Field(default="trading_system.log", alias="LOG_FILE")
+    
     # Trading Configuration
     default_symbol: str = "XAU/USD"  # Gold
     default_interval: str = "1h"

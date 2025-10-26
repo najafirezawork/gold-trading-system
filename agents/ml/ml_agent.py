@@ -11,54 +11,88 @@ from pathlib import Path
 
 from agents.base import BaseAgent, AgentOutput, AgentType
 from agents.ml.feature_engineer import FeatureEngineer
+from agents.ml.feature_selector import AdvancedFeatureSelector
 from agents.ml.models import MLModel, RandomForestModel, XGBoostModel, EnsembleModel
 from data_layer.models import MarketData
 
 
 @dataclass
 class MLAgentOutput:
-    """Output from ML Agent"""
-    recommendation: str  # BUY, SELL, HOLD
-    confidence: float  # 0 to 1
-    reason: str
+    """
+    Output from ML Agent - Continuous Signal Generator
+    
+    ML Agent تولید می‌کند:
+    - prob_up: احتمال حرکت صعودی (0-1)
+    - prob_down: احتمال حرکت نزولی (0-1)
+    - trend_strength: قدرت ترند (0-1)
+    - volatility: نوسان‌پذیری بازار (0-1)
+    - momentum: مومنتوم بازار (-1 to +1)
+    
+    هیچ BUY/SELL/HOLD اینجا وجود ندارد!
+    تصمیم‌گیری با Decision Agent است.
+    """
+    prob_up: float  # احتمال حرکت صعودی (0-1)
+    prob_down: float  # احتمال حرکت نزولی (0-1)
+    trend_strength: float  # قدرت ترند (0-1)
+    volatility: float  # نوسان‌پذیری (0-1)
+    momentum: float  # مومنتوم (-1 to +1)
     metadata: Dict[str, Any]
 
 
 class MLAgent(BaseAgent):
     """
-    ML Agent برای پیش‌بینی قیمت
+    ML Agent - Continuous Signal Generator
+    
+    🎯 نقش: تولید سیگنال‌های مداوم (Continuous Signals) از market data
+    
+    ❌ این Agent تصمیم‌گیری نمی‌کند (No BUY/SELL/HOLD)
+    ✅ فقط احتمالات و قدرت‌ها را محاسبه می‌کند
+    
+    خروجی:
+    {
+        "prob_up": 0.34,
+        "prob_down": 0.66,
+        "trend_strength": 0.61,
+        "volatility": 0.87,
+        "momentum": -0.32
+    }
     
     Features:
     - Feature engineering از market data
-    - Training با چند model مختلف (RandomForest, XGBoost)
-    - Ensemble predictions
-    - Feature importance analysis
-    - Model persistence (save/load)
+    - Probability prediction (نه classification)
+    - Trend strength calculation
+    - Volatility estimation
+    - Momentum analysis
     
     Example:
         >>> agent = MLAgent()
         >>> agent.train(train_data)
-        >>> output = agent.analyze(test_data)
-        >>> print(output.recommendation)  # BUY, SELL, HOLD
+        >>> signal = agent.analyze(test_data)
+        >>> print(f"UP Probability: {signal.prob_up:.2%}")
+        >>> print(f"Trend Strength: {signal.trend_strength:.2%}")
     """
     
     def __init__(
         self,
         feature_engineer: Optional[FeatureEngineer] = None,
+        feature_selector: Optional[AdvancedFeatureSelector] = None,
         model: Optional[MLModel] = None,
-        confidence_threshold: float = 0.6,
-        model_path: Optional[str] = None
+        model_path: Optional[str] = None,
+        enable_feature_selection: bool = True
     ):
         """
         Args:
             feature_engineer: FeatureEngineer instance (اختیاری)
+            feature_selector: AdvancedFeatureSelector instance (اختیاری)
             model: MLModel instance (اختیاری، default: Ensemble)
-            confidence_threshold: حداقل confidence برای trade
             model_path: مسیر برای save/load model
+            enable_feature_selection: فعال‌سازی feature selection اتوماتیک
         """
-        super().__init__(agent_type=AgentType.ML, name="ML Agent")
+        super().__init__(agent_type=AgentType.ML, name="ML Signal Generator")
         
         self.feature_engineer = feature_engineer or FeatureEngineer()
+        self.feature_selector = feature_selector or AdvancedFeatureSelector(n_features=25)
+        self.enable_feature_selection = enable_feature_selection
         
         # اگر model داده نشد، Ensemble بساز
         if model is None:
@@ -69,12 +103,12 @@ class MLAgent(BaseAgent):
         else:
             self.model = model
         
-        self.confidence_threshold = confidence_threshold
         self.model_path = model_path or "models/ml_agent_model.pkl"
         
         # آمار
         self.training_history: List[Dict] = []
         self.last_features: Optional[pd.DataFrame] = None
+        self.selected_features: Optional[List[str]] = None
     
     def train(
         self,
@@ -109,6 +143,21 @@ class MLAgent(BaseAgent):
         feature_cols = [col for col in df.columns if col not in ['target', 'target_return', 'future_close']]
         X = df[feature_cols]
         y = df['target']
+        
+        # Feature Selection
+        if self.enable_feature_selection:
+            print(f"\nPerforming feature selection...")
+            X_selected = self.feature_selector.select_features(X, y, method='combined')
+            self.selected_features = list(X_selected.columns)
+            
+            # Get selection report
+            selection_report = self.feature_selector.get_selection_report()
+            print(f"Selected {len(self.selected_features)} features out of {len(X.columns)}")
+            print(f"Top features: {[f[0] for f in selection_report.get('top_features', [])[:5]]}")
+            
+            X = X_selected
+        else:
+            self.selected_features = list(X.columns)
         
         # Train/Val split
         split_idx = int(len(X) * (1 - val_split))
@@ -166,10 +215,17 @@ class MLAgent(BaseAgent):
     
     def analyze(self, market_data: MarketData) -> MLAgentOutput:
         """
-        تحلیل market data و پیش‌بینی
+        تولید سیگنال‌های مداوم از market data
+        
+        🎯 خروجی: Continuous Signals (نه Classification!)
         
         Returns:
-            MLAgentOutput با recommendation و confidence
+            MLAgentOutput با:
+            - prob_up: احتمال صعودی
+            - prob_down: احتمال نزولی
+            - trend_strength: قدرت ترند
+            - volatility: نوسان
+            - momentum: مومنتوم
         """
         if not self.model.is_trained:
             # سعی کن model را load کنی
@@ -186,40 +242,72 @@ class MLAgent(BaseAgent):
         feature_cols = [col for col in df.columns if col not in ['target', 'target_return', 'future_close']]
         current_features = df[feature_cols].iloc[[-1]]
         
+        # اگر feature selection استفاده شده، فقط selected features را بگیر
+        if self.enable_feature_selection and self.selected_features:
+            # اطمینان از اینکه features موجود هستند
+            available_features = [f for f in self.selected_features if f in current_features.columns]
+            if len(available_features) > 0:
+                current_features = current_features[available_features]
+            else:
+                print("⚠️ Warning: No selected features found in current data, using all features")
+        
         self.last_features = current_features
         
-        # Prediction
-        prediction = self.model.predict(current_features)[0]  # 0 or 1
+        # ========================================
+        # 1️⃣ Probability Prediction (نه Classification!)
+        # ========================================
         proba = self.model.predict_proba(current_features)[0]  # [P(DOWN), P(UP)]
         
-        confidence = proba[1] if prediction == 1 else proba[0]
+        prob_down = float(proba[0])
+        prob_up = float(proba[1])
         
-        # Recommendation
-        if prediction == 1 and confidence >= self.confidence_threshold:
-            recommendation = "BUY"
-            reason = f"Model predicts price will go UP (confidence: {confidence:.1%})"
-        elif prediction == 0 and confidence >= self.confidence_threshold:
-            recommendation = "SELL"
-            reason = f"Model predicts price will go DOWN (confidence: {confidence:.1%})"
+        # ========================================
+        # 2️⃣ Trend Strength از features
+        # ========================================
+        # استفاده از ADX یا SMA slopes
+        if 'adx_14' in df.columns:
+            trend_strength = float(min(df['adx_14'].iloc[-1] / 100.0, 1.0))
         else:
-            recommendation = "HOLD"
-            reason = f"Low confidence ({confidence:.1%} < {self.confidence_threshold:.1%})"
+            # fallback: از تفاوت SMA‌ها
+            if 'sma_20' in df.columns and 'sma_50' in df.columns:
+                sma_diff = abs(df['sma_20'].iloc[-1] - df['sma_50'].iloc[-1])
+                sma_avg = (df['sma_20'].iloc[-1] + df['sma_50'].iloc[-1]) / 2
+                trend_strength = float(min(sma_diff / sma_avg, 1.0))
+            else:
+                trend_strength = 0.5  # default
+        
+        # ========================================
+        # 3️⃣ Volatility از ATR
+        # ========================================
+        if 'atr_14' in df.columns:
+            current_price = float(market_data.data[-1].close)
+            atr = float(df['atr_14'].iloc[-1])
+            volatility = float(min(atr / current_price * 10, 1.0))  # normalize
+        else:
+            volatility = 0.5  # default
+        
+        # ========================================
+        # 4️⃣ Momentum
+        # ========================================
+        # Momentum = (prob_up - prob_down) * trend_strength
+        # محدوده: -1 (strong down) تا +1 (strong up)
+        momentum = float((prob_up - prob_down) * trend_strength)
         
         # Metadata
         metadata = {
-            'prediction': int(prediction),
-            'probability_up': float(proba[1]),
-            'probability_down': float(proba[0]),
-            'confidence': float(confidence),
             'model': self.model.name,
             'current_price': float(market_data.data[-1].close),
-            'timestamp': market_data.data[-1].datetime.isoformat()
+            'timestamp': market_data.data[-1].datetime.isoformat(),
+            'features_used': list(current_features.columns),
+            'raw_prediction': int(1 if prob_up > prob_down else 0)  # برای reference
         }
         
         return MLAgentOutput(
-            recommendation=recommendation,
-            confidence=confidence,
-            reason=reason,
+            prob_up=prob_up,
+            prob_down=prob_down,
+            trend_strength=trend_strength,
+            volatility=volatility,
+            momentum=momentum,
             metadata=metadata
         )
     

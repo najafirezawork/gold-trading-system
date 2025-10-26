@@ -88,12 +88,18 @@ class RandomForestModel(MLModel):
         n_estimators: int = 100,
         max_depth: Optional[int] = 10,
         min_samples_split: int = 5,
+        min_samples_leaf: int = 1,
+        max_features: str = 'auto',
+        class_weight: Optional[Dict[int, float]] = None,
         random_state: int = 42
     ):
         super().__init__("RandomForest")
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
+        self.max_features = max_features
+        self.class_weight = class_weight
         self.random_state = random_state
     
     def train(
@@ -112,6 +118,9 @@ class RandomForestModel(MLModel):
             n_estimators=self.n_estimators,
             max_depth=self.max_depth,
             min_samples_split=self.min_samples_split,
+            min_samples_leaf=self.min_samples_leaf,
+            max_features=self.max_features,
+            class_weight=self.class_weight,
             random_state=self.random_state,
             n_jobs=-1
         )

@@ -54,6 +54,12 @@ class FeatureEngineer:
         if self.include_price_patterns:
             df = self._add_price_patterns(df)
         
+        # Microstructure features
+        df = self._add_microstructure_features(df)
+        
+        # Multi-timeframe features
+        df = self._add_multi_timeframe_features(df)
+        
         # Statistical features
         df = self._add_statistical_features(df)
         
@@ -161,6 +167,165 @@ class FeatureEngineer:
             (df['open'] > df['close'].shift(1)) &
             (df['close'] < df['open'].shift(1))
         ).astype(int)
+        
+        return df
+    
+    def _add_microstructure_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """اضافه کردن ویژگی‌های ریزساختار بازار"""
+        
+        # Typical Price (HLC3)
+        df['hlc3'] = (df['high'] + df['low'] + df['close']) / 3
+        df['typical_price'] = df['hlc3']
+        
+        # Money Flow Index (MFI)
+        df['money_flow'] = df['typical_price'] * df['volume']
+        df['positive_mf'] = np.where(df['typical_price'] > df['typical_price'].shift(1), 
+                                    df['money_flow'], 0)
+        df['negative_mf'] = np.where(df['typical_price'] < df['typical_price'].shift(1), 
+                                    df['money_flow'], 0)
+        
+        for period in [14, 21]:
+            positive_sum = df['positive_mf'].rolling(period).sum()
+            negative_sum = df['negative_mf'].rolling(period).sum()
+            money_ratio = positive_sum / (negative_sum + 1e-10)  # جلوگیری از تقسیم بر صفر
+            df[f'mfi_{period}'] = 100 - (100 / (1 + money_ratio))
+        
+        # Price-Volume Divergence
+        df['pv_trend'] = df['close'].rolling(10).apply(
+            lambda x: 1 if x.iloc[-1] > x.iloc[0] else -1, raw=False
+        )
+        df['volume_trend'] = df['volume'].rolling(10).apply(
+            lambda x: 1 if x.iloc[-1] > x.iloc[0] else -1, raw=False
+        )
+        df['pv_divergence'] = (df['pv_trend'] != df['volume_trend']).astype(int)
+        
+        # Volume Price Trend (VPT)
+        df['vpt'] = (df['close'].pct_change() * df['volume']).cumsum()
+        df['vpt_sma_10'] = df['vpt'].rolling(10).mean()
+        df['vpt_signal'] = np.where(df['vpt'] > df['vpt_sma_10'], 1, -1)
+        
+        # On-Balance Volume (OBV)
+        df['price_change'] = df['close'].diff()
+        df['obv'] = np.where(df['price_change'] > 0, df['volume'],
+                    np.where(df['price_change'] < 0, -df['volume'], 0)).cumsum()
+        df['obv_sma_20'] = df['obv'].rolling(20).mean()
+        df['obv_signal'] = np.where(df['obv'] > df['obv_sma_20'], 1, -1)
+        
+        # Accumulation/Distribution Line (A/D)
+        df['clv'] = ((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low'] + 1e-10)
+        df['ad_line'] = (df['clv'] * df['volume']).cumsum()
+        df['ad_sma_14'] = df['ad_line'].rolling(14).mean()
+        
+        # Volume Rate of Change
+        for period in [10, 20]:
+            df[f'volume_roc_{period}'] = (df['volume'] - df['volume'].shift(period)) / (df['volume'].shift(period) + 1e-10) * 100
+        
+        # Price-Volume Relationship
+        df['price_volume_corr_10'] = df['close'].rolling(10).corr(df['volume'])
+        df['price_volume_corr_20'] = df['close'].rolling(20).corr(df['volume'])
+        
+        return df
+    
+    def _add_multi_timeframe_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """اضافه کردن ویژگی‌های چند timeframe"""
+        
+        # فرض: داده ورودی 1H است، 4H و 1D را شبیه‌سازی می‌کنیم
+        
+        # 4H timeframe simulation از 1H data
+        try:
+            # Resample to 4H
+            df_4h = df.resample('4H', label='right').agg({
+                'open': 'first',
+                'high': 'max', 
+                'low': 'min',
+                'close': 'last',
+                'volume': 'sum'
+            }).dropna()
+            
+            if len(df_4h) > 20:  # اطمینان از داشتن داده کافی
+                # Calculate 4H indicators
+                df_4h['rsi_4h'] = self._calculate_rsi(df_4h['close'], 14)
+                df_4h['sma_20_4h'] = df_4h['close'].rolling(20).mean()
+                df_4h['ema_12_4h'] = df_4h['close'].ewm(span=12, adjust=False).mean()
+                df_4h['macd_4h'], _, _ = self._calculate_macd(df_4h['close'])
+                df_4h['atr_4h'] = self._calculate_atr(df_4h, 14)
+                
+                # Bollinger Bands 4H
+                df_4h['bb_upper_4h'], df_4h['bb_middle_4h'], df_4h['bb_lower_4h'] = self._calculate_bollinger_bands(df_4h['close'], 20, 2)
+                df_4h['bb_position_4h'] = (df_4h['close'] - df_4h['bb_lower_4h']) / (df_4h['bb_upper_4h'] - df_4h['bb_lower_4h'] + 1e-10)
+                
+                # Join back to 1H (forward fill)
+                df = df.join(df_4h[['rsi_4h', 'sma_20_4h', 'ema_12_4h', 'macd_4h', 'atr_4h', 
+                                   'bb_upper_4h', 'bb_middle_4h', 'bb_lower_4h', 'bb_position_4h']], 
+                            how='left').ffill()
+        except Exception:
+            # در صورت خطا، مقادیر NaN قرار می‌دهیم
+            for col in ['rsi_4h', 'sma_20_4h', 'ema_12_4h', 'macd_4h', 'atr_4h', 
+                       'bb_upper_4h', 'bb_middle_4h', 'bb_lower_4h', 'bb_position_4h']:
+                df[col] = np.nan
+        
+        # Daily timeframe simulation
+        try:
+            df_1d = df.resample('1D', label='right').agg({
+                'open': 'first',
+                'high': 'max', 
+                'low': 'min',
+                'close': 'last',
+                'volume': 'sum'
+            }).dropna()
+            
+            if len(df_1d) > 20:
+                # Calculate daily indicators
+                df_1d['rsi_1d'] = self._calculate_rsi(df_1d['close'], 14)
+                df_1d['sma_20_1d'] = df_1d['close'].rolling(20).mean()
+                df_1d['ema_12_1d'] = df_1d['close'].ewm(span=12, adjust=False).mean()
+                
+                # Join back to 1H
+                df = df.join(df_1d[['rsi_1d', 'sma_20_1d', 'ema_12_1d']], how='left').ffill()
+        except Exception:
+            for col in ['rsi_1d', 'sma_20_1d', 'ema_12_1d']:
+                df[col] = np.nan
+        
+        # Trend alignment features
+        df['trend_1h'] = np.where(df['close'] > df['sma_20'], 1, -1)
+        
+        # 4H trend alignment
+        if 'sma_20_4h' in df.columns:
+            df['trend_4h'] = np.where(df['close'] > df['sma_20_4h'], 1, -1)
+            df['trend_alignment_4h'] = (df['trend_1h'] == df['trend_4h']).astype(int)
+        else:
+            df['trend_4h'] = 0
+            df['trend_alignment_4h'] = 0
+        
+        # Daily trend alignment
+        if 'sma_20_1d' in df.columns:
+            df['trend_1d'] = np.where(df['close'] > df['sma_20_1d'], 1, -1)
+            df['trend_alignment_1d'] = (df['trend_1h'] == df['trend_1d']).astype(int)
+            df['full_trend_alignment'] = ((df['trend_1h'] == df['trend_4h']) & 
+                                         (df['trend_1h'] == df['trend_1d'])).astype(int)
+        else:
+            df['trend_1d'] = 0
+            df['trend_alignment_1d'] = 0
+            df['full_trend_alignment'] = 0
+        
+        # RSI divergence بین timeframes
+        if 'rsi_4h' in df.columns and 'rsi_1d' in df.columns:
+            df['rsi_divergence_4h'] = abs(df['rsi_14'] - df['rsi_4h'])
+            df['rsi_divergence_1d'] = abs(df['rsi_14'] - df['rsi_1d'])
+        else:
+            df['rsi_divergence_4h'] = 0
+            df['rsi_divergence_1d'] = 0
+        
+        # Higher timeframe momentum
+        if 'ema_12_4h' in df.columns:
+            df['momentum_4h'] = (df['close'] - df['ema_12_4h']) / df['ema_12_4h'] * 100
+        else:
+            df['momentum_4h'] = 0
+            
+        if 'ema_12_1d' in df.columns:
+            df['momentum_1d'] = (df['close'] - df['ema_12_1d']) / df['ema_12_1d'] * 100
+        else:
+            df['momentum_1d'] = 0
         
         return df
     
