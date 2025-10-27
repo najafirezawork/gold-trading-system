@@ -17,6 +17,8 @@ class AgentType(Enum):
     ML = "ml"
     SENTIMENT = "sentiment"
     DECISION = "decision"
+    RISK = "risk"
+    TECHNICAL = "technical"
 
 
 class AgentOutput:

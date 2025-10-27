@@ -108,6 +108,12 @@ class SignalAgent(BaseAgent):
         # ATR (Volatility)
         atr = self.indicators.calculate_atr(highs, lows, closes)
         
+        # Fibonacci Retracements
+        fib_levels = self.indicators.calculate_fibonacci_retracements(
+            max(highs), min(lows)
+        )
+        fib_signal = self.indicators.get_fibonacci_signal(closes[-1], fib_levels)
+        
         return {
             "sma_20": sma_20,
             "sma_50": sma_50,
@@ -123,7 +129,11 @@ class SignalAgent(BaseAgent):
                 "middle": middle_band,
                 "lower": lower_band
             },
-            "atr": atr
+            "atr": atr,
+            "fibonacci": {
+                "levels": fib_levels,
+                "current_position": fib_signal
+            }
         }
     
     def _generate_signal(self, indicators: Dict[str, Any], current_price: float) -> tuple[float, float]:

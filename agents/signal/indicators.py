@@ -3,7 +3,7 @@ Technical indicators calculations.
 """
 
 import numpy as np
-from typing import List
+from typing import List, Dict, Any
 
 
 class TechnicalIndicators:
@@ -174,3 +174,75 @@ class TechnicalIndicators:
             return np.mean(true_ranges)
         
         return np.mean(true_ranges[-period:])
+    
+    @staticmethod
+    def calculate_fibonacci_retracements(
+        high: float,
+        low: float
+    ) -> Dict[str, float]:
+        """
+        Calculate Fibonacci retracement levels.
+        
+        Fibonacci levels: 23.6%, 38.2%, 50%, 61.8%, 78.6%
+        
+        Args:
+            high: Highest price in the uptrend
+            low: Lowest price in the downtrend
+            
+        Returns:
+            Dictionary with Fibonacci levels
+        """
+        diff = high - low
+        
+        fib_levels = {
+            "0": low,
+            "23.6": low + (diff * 0.236),
+            "38.2": low + (diff * 0.382),
+            "50.0": low + (diff * 0.500),  # Middle point
+            "61.8": low + (diff * 0.618),  # Golden ratio
+            "78.6": low + (diff * 0.786),
+            "100": high
+        }
+        
+        return fib_levels
+    
+    @staticmethod
+    def get_fibonacci_signal(
+        current_price: float,
+        fib_levels: Dict[str, float]
+    ) -> Dict[str, Any]:
+        """
+        Get signal based on Fibonacci levels.
+        
+        Args:
+            current_price: Current market price
+            fib_levels: Fibonacci retracement levels
+            
+        Returns:
+            Signal analysis based on proximity to Fibonacci levels
+        """
+        # Find nearest Fibonacci level
+        levels_list = sorted(fib_levels.items(), key=lambda x: x[1])
+        
+        signal_strength = 0.0
+        nearest_level = None
+        distance_to_level = float('inf')
+        
+        for level_name, level_price in levels_list:
+            distance = abs(current_price - level_price)
+            if distance < distance_to_level:
+                distance_to_level = distance
+                nearest_level = (level_name, level_price)
+        
+        # Signal strength based on distance
+        max_distance = (fib_levels["100"] - fib_levels["0"]) * 0.02  # 2% tolerance
+        if distance_to_level <= max_distance:
+            signal_strength = 1.0 - (distance_to_level / max_distance)
+        
+        return {
+            "nearest_level": nearest_level[0] if nearest_level else None,
+            "nearest_price": nearest_level[1] if nearest_level else None,
+            "distance": distance_to_level,
+            "signal_strength": signal_strength,
+            "is_at_support": signal_strength > 0.8
+        }
