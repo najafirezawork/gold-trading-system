@@ -14,6 +14,32 @@
 
 **پلتفرم**: Windows, Linux, macOS  - دایرکتوری‌ها و ساختار پروژه (به‌صورت دقیق)
 
+---
+
+## 📚 Documentation / مستندات
+
+### Core Documentation
+
+For comprehensive technical documentation and architecture details, please refer to:
+
+| Document | Description | Audience |
+|----------|-------------|----------|
+| **[SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)** | Complete system architecture, components, communication protocols, scalability, and security | Technical Leads, Architects, DevOps |
+| **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** | Developer onboarding guide with setup instructions, coding standards, and common tasks | Developers, Contributors |
+| **[SEQUENCE_DIAGRAMS.md](SEQUENCE_DIAGRAMS.md)** | Visual sequence diagrams for key workflows and data flows | All Technical Staff |
+| **[ARCHITECTURE_DETAILED.md](ARCHITECTURE_DETAILED.md)** | Detailed architecture analysis (Persian) | Technical Team |
+| **[FIBONACCI_INDICATOR.md](FIBONACCI_INDICATOR.md)** | Fibonacci retracement indicator documentation | Analysts, Traders |
+| **[TEST_SIGNAL_AGENT_GUIDE.md](TEST_SIGNAL_AGENT_GUIDE.md)** | Testing guide for signal agents | QA Engineers, Developers |
+
+### Quick Links
+
+- **🏗️ Architecture:** Start with [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) for system overview
+- **👨‍💻 Development:** See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for development setup
+- **🔄 Workflows:** Check [SEQUENCE_DIAGRAMS.md](SEQUENCE_DIAGRAMS.md) for visual flow diagrams
+- **📊 Backtesting:** Refer to the Backtesting section below
+
+---
+
 - شرح ماژول‌ها و اجزا (Agents, Data Layer, Backtesting, Models)
 
 ---- اندیکاتورها و منطق سیگنال (شامل Fibonacci)
